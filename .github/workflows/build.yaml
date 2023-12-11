@@ -1,0 +1,60 @@
+name: Build Arch Linux ISO With ZFS
+
+on:
+  schedule:
+    - cron: "0 1 * * 0"
+  workflow_dispatch:
+    inputs:
+      dev:
+        description: "Run as development?"
+        type: boolean
+        required: true
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    permissions:
+      contents: write
+
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set current date as environment variable
+        run: echo "DATE=$(date +'%Y.%m.%d')" >>$GITHUB_ENV
+
+      - name: Run build script
+        run: bash build.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'true' }}
+        with:
+          name: Arch Linux ZFS ${{ env.DATE }}
+          path: |
+            archlinux_zfs-${{ env.DATE }}-x86_64.iso
+            CHECKSUMS.txt
+      - name: Create tag and release
+        uses: softprops/action-gh-release@v0.1.14
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'false') }}
+        with:
+          name: Arch Linux ZFS ${{ env.DATE }}
+          tag_name: ${{ env.DATE }}
+          body_path: CHECKSUMS.txt
+          files: |
+            archlinux_zfs-${{ env.DATE }}-x86_64.iso
+            CHECKSUMS.txt
+      - name: Upload to SourceForge
+        id: upload
+        run: |
+          mkdir ~/.ssh
+          ssh-keyscan frs.sourceforge.net >> ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          scp archlinux_zfs-${{ env.DATE }}-x86_64.iso hertz-hwang@frs.sourceforge.net:/home/frs/project/archzfsiso/archlinux_zfs-x86_64.iso
