@@ -41,7 +41,7 @@ build() {
 			echo ''
 		EOL
   "
-  step "Updating packages and installing archiso..." "pacman -Syu --noconfirm archiso git"
+  step "Updating packages and installing archiso..." "pacman -Syu --noconfirm archiso git grub"
   step "Git clone archzfsiso repository from my github..." "git clone --depth 1 https://github.com/hertz-hwang/archzfsiso /tmp/archzfsiso"
   step "Copying releng profile to build directory..." "cp -r /tmp/archzfsiso/* /tmp/isobuild"
   step "Building ISO..." "mkarchiso -v -w work/ -o ./ /tmp/isobuild"
